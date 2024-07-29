@@ -1,32 +1,58 @@
-"use client"
-import { useState } from 'react'
-import Dialer from '../components/Dialer'
-import LiveMessages from '../components/LiveMessages'
-import Transcript from '../components/LiveTranscript'
-import CallStatus from '../components/CallStatus'
+"use client";
+
+import { useEffect, useState } from 'react';
+import { socket } from '../socket';
+import { Button } from '@/components/ui/button';
 
 export default function Home() {
-  const [callActive, setCallActive] = useState(false)
-  const [callData, setCallData] = useState<any>(null)
-  const [callStatus, setCallStatus] = useState('')
+  const [isConnected, setIsConnected] = useState(false);
+  const [transport, setTransport] = useState('N/A');
+  const [data, setData] = useState(null);
 
+  useEffect(() => {
+    function onConnect() {
+      setIsConnected(true);
+      setTransport(socket.io.engine.transport.name);
+
+      socket.io.engine.on('upgrade', (transport) => {
+        setTransport(transport.name);
+      });
+    }
+
+    function onDisconnect() {
+      setIsConnected(false);
+      setTransport('N/A');
+    }
+
+    socket.on('connect', onConnect);
+    socket.on('disconnect', onDisconnect);
+
+    socket.on('dataFetched', (apiData) => {
+      setData(apiData);
+      console.log('Data fetched from server:', apiData);
+    });
+
+    return () => {
+      socket.off('connect', onConnect);
+      socket.off('disconnect', onDisconnect);
+      socket.off('dataFetched');
+    };
+  }, []);
+
+  const fetchData = () => {
+    if (isConnected) {
+      socket.emit('startCall');
+    } else {
+      console.log('Not connected to the server');
+    }
+  };
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Phone Call App</h1>
-      <Dialer
-        onCallInitiated={(callId) => setCallActive(true)}
-        onCallEnded={(data) => {
-          setCallActive(false)
-          setCallData(data)
-          setCallStatus('ended')
-        }}
-        onStatusUpdate={setCallStatus}
-      />
-      <CallStatus status={callStatus} endedReason={callData?.endedReason} />
-      {!callActive && callData && (
-        <Transcript transcript={callData.transcript} />
-      )}
+      <Button variant={'default'} onClick={fetchData}>Make a call</Button>
+      <p>Status: {isConnected ? 'connected' : 'disconnected'}</p>
+      <p>Transport: {transport}</p>
+      {data && <pre>{JSON.stringify(data, null, 2)}</pre>}
     </div>
-  )
+  );
 }
