@@ -6,36 +6,35 @@ import { Button } from '@/components/ui/button';
 
 export default function Home() {
   const [isConnected, setIsConnected] = useState(false);
-  const [transport, setTransport] = useState('N/A');
+  const [message, setMessage] = useState('');
   const [data, setData] = useState(null);
 
   useEffect(() => {
-    function onConnect() {
-      setIsConnected(true);
-      setTransport(socket.io.engine.transport.name);
 
-      socket.io.engine.on('upgrade', (transport) => {
-        setTransport(transport.name);
-      });
-    }
+    socket.on('connect', () => {
+      console.log('Connected to server');
+      setIsConnected(true)
+    });
 
-    function onDisconnect() {
-      setIsConnected(false);
-      setTransport('N/A');
-    }
-
-    socket.on('connect', onConnect);
-    socket.on('disconnect', onDisconnect);
+    socket.on('messageFromServer', (data) => {
+      setMessage(data.message);
+    });
 
     socket.on('dataFetched', (apiData) => {
       setData(apiData);
       console.log('Data fetched from server:', apiData);
     });
 
+    socket.on('disconnect', () => {
+      console.log('Disconnected from server');
+      setIsConnected(false)
+    });
+
     return () => {
-      socket.off('connect', onConnect);
-      socket.off('disconnect', onDisconnect);
+      socket.off('connect');
+      socket.off('messageFromServer');
       socket.off('dataFetched');
+      socket.off('disconnect');
     };
   }, []);
 
@@ -48,10 +47,9 @@ export default function Home() {
   };
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="container mx-auto p-4 space-y-2">
       <Button variant={'default'} onClick={fetchData}>Make a call</Button>
-      <p>Status: {isConnected ? 'connected' : 'disconnected'}</p>
-      <p>Transport: {transport}</p>
+      <p>Message: {message}</p>
       {data && <pre>{JSON.stringify(data, null, 2)}</pre>}
     </div>
   );

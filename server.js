@@ -1,4 +1,5 @@
 import { createServer } from 'http';
+import express from 'express';
 import next from 'next';
 import { Server } from 'socket.io';
 
@@ -9,12 +10,20 @@ const app = next({ dev, hostname, port });
 const handler = app.getRequestHandler();
 
 app.prepare().then(() => {
-    const httpServer = createServer(handler);
+    const server = express();
+    const httpServer = createServer(server);
 
     const io = new Server(httpServer);
 
     io.on('connection', (socket) => {
         console.log('Client connected:', socket.id);
+
+        const sendMessage = () => {
+            const message = `Hello from the server! Time: ${new Date().toLocaleTimeString()}`;
+            socket.emit('messageFromServer', { message });
+        };
+
+        const interval = setInterval(sendMessage, 1000);
 
         socket.on('startCall', async () => {
             try {
@@ -46,10 +55,16 @@ app.prepare().then(() => {
 
         socket.on('disconnect', () => {
             console.log('Client disconnected:', socket.id);
+            clearInterval(interval);
         });
     });
 
-    httpServer.listen(port, () => {
+    server.all('*', (req, res) => {
+        return handler(req, res);
+    });
+
+    httpServer.listen(port, (err) => {
+        if (err) throw err;
         console.log(`> Ready on http://${hostname}:${port}`);
     });
 });
