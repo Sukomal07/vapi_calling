@@ -20,10 +20,14 @@ export default function Home() {
       setMessage(data.message);
     });
 
-    socket.on('dataFetched', (apiData) => {
-      setData(apiData);
-      console.log('Data fetched from server:', apiData);
+    socket.on('createCall', (apiData) => {
+      console.log('Call created :', apiData);
     });
+
+    socket.on('getMessage', (messageData) => {
+      setData(messageData);
+      console.log("message data", messageData)
+    })
 
     socket.on('disconnect', () => {
       console.log('Disconnected from server');
@@ -33,7 +37,8 @@ export default function Home() {
     return () => {
       socket.off('connect');
       socket.off('messageFromServer');
-      socket.off('dataFetched');
+      socket.off('createCall');
+      socket.off('getMessage');
       socket.off('disconnect');
     };
   }, []);
@@ -41,6 +46,8 @@ export default function Home() {
   const fetchData = () => {
     if (isConnected) {
       socket.emit('startCall');
+
+      socket.emit('duringCall'); // Emit the duringCall event with callId
     } else {
       console.log('Not connected to the server');
     }

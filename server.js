@@ -46,12 +46,28 @@ app.prepare().then(() => {
                 });
 
                 const data = await response.json();
-                socket.emit('dataFetched', data);
+                socket.emit('createCall', data);
             } catch (error) {
                 console.error('Error fetching data:', error);
-                socket.emit('dataFetched', { error: 'Failed to fetch data' });
+                socket.emit('createCall', { error: 'Failed to fetch data' });
             }
         });
+
+        socket.on('duringCall', async () => {
+            try {
+                const res = await fetch('http://localhost:3000/api/webhook', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                })
+                const data = await res.json();
+                socket.emit('getMessage', data);
+            } catch (error) {
+                console.error('Error fetching message:', error);
+                socket.emit('getMessage', { error: 'Failed to fetch message' });
+            }
+        })
 
         socket.on('disconnect', () => {
             console.log('Client disconnected:', socket.id);
